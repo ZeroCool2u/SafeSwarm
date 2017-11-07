@@ -1,3 +1,0 @@
-Testing git
-
-Delete this file

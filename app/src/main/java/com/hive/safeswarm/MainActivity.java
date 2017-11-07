@@ -9,6 +9,8 @@ import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import dji.common.error.DJIError;
@@ -21,6 +23,9 @@ import dji.sdk.sdkmanager.DJISDKManager;
 // Safe Swarm must be run using a physical device due to the lack of WiFi support in AVDs.
 
 public class MainActivity extends AppCompatActivity {
+
+    Button deployButton;
+    Button summonButton;
 
     public static final String FLAG_CONNECTION_CHANGE = "dji_sdk_connection_change";
     private static final String TAG = MainActivity.class.getName();
@@ -105,6 +110,32 @@ public class MainActivity extends AppCompatActivity {
         //Init DJI SDK Manager
         mHandler = new Handler(Looper.getMainLooper());
         DJISDKManager.getInstance().registerApp(this, mDJISDKManagerCallback);
+
+        // Locate the deployButton in activity_main.xml
+        deployButton = (Button) findViewById(R.id.MyButton);
+
+        // Capture deployButton clicks
+        deployButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View arg0) {
+
+                // Start NewActivity.class
+                Intent myIntent = new Intent(MainActivity.this,Deployment.class);
+                startActivity(myIntent);
+            }
+        });
+
+        // Locate the deployButton in activity_main.xml
+        summonButton = (Button) findViewById(R.id.MySummonButton);
+
+        // Capture deployButton clicks
+        summonButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View arg0) {
+
+                // Start NewActivity.class
+                Intent myIntent = new Intent(MainActivity.this,Summon.class);
+                startActivity(myIntent);
+            }
+        });
 
     }
 

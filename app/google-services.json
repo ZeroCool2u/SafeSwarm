@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "810135971881",
+    "firebase_url": "https://safeswarm-45e65.firebaseio.com",
+    "project_id": "safeswarm-45e65",
+    "storage_bucket": "safeswarm-45e65.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810135971881:android:2f0bab7ed07f6a45",
+        "android_client_info": {
+          "package_name": "com.hive.safeswarm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "810135971881-ah3lduujn7h07uah4qqp1tdvs9tu5rvq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hive.safeswarm",
+            "certificate_hash": "20a1715714ad26692316c1fd278717ea24f1e7d9"
+          }
+        },
+        {
+          "client_id": "810135971881-0l124jnb8q1r9nca5hslfpmed83blf80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuM_-Avxhlb4PVJZLASsF_r3zlwFyhgHs"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "810135971881-0l124jnb8q1r9nca5hslfpmed83blf80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,6 +3,7 @@ package com.hive.safeswarm;
 
 import android.Manifest;
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,6 +14,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
 import dji.sdk.base.BaseComponent;
@@ -22,14 +26,29 @@ import dji.sdk.sdkmanager.DJISDKManager;
 //NOTE: Initial registration will fail when the app is run using an AVD.
 // Safe Swarm must be run using a physical device due to the lack of WiFi support in AVDs.
 
-public class MainActivity extends AppCompatActivity {
+/*class LatLong {
 
-    Button deployButton;
-    Button summonButton;
+    public String lat;
+    public String lng;
+
+    public LatLong() {
+        // Default constructor required for calls to DataSnapshot.getValue(User.class)
+    }
+
+    public LatLong(String lat, String lng) {
+        this.lat = lat;
+        this.lng = lng;
+    }
+}*/
+
+
+public class MainActivity extends AppCompatActivity {
 
     public static final String FLAG_CONNECTION_CHANGE = "dji_sdk_connection_change";
     private static final String TAG = MainActivity.class.getName();
     private static BaseProduct mProduct;
+    Button deployButton;
+    Button summonButton;
     private Handler mHandler;
     private Runnable updateRunnable = new Runnable() {
         @Override
@@ -111,8 +130,21 @@ public class MainActivity extends AppCompatActivity {
         mHandler = new Handler(Looper.getMainLooper());
         DJISDKManager.getInstance().registerApp(this, mDJISDKManagerCallback);
 
+        // Write a message to the database
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference();
+
+        //myRef.setValue("Hello, World!");
+        Location targetLocation = new Location("");//provider name is unnecessary
+        targetLocation.setLatitude(25.0d);//your coords of course
+        targetLocation.setLongitude(25.0d);
+
+        //LatLng current_latlng = new LatLng(25,25);
+        myRef.child("users").child("1").setValue(targetLocation);
+
+
         // Locate the deployButton in activity_main.xml
-        deployButton = (Button) findViewById(R.id.MyButton);
+        deployButton = findViewById(R.id.MyButton);
 
         // Capture deployButton clicks
         deployButton.setOnClickListener(new View.OnClickListener() {
@@ -125,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Locate the deployButton in activity_main.xml
-        summonButton = (Button) findViewById(R.id.MySummonButton);
+        summonButton = findViewById(R.id.MySummonButton);
 
         // Capture deployButton clicks
         summonButton.setOnClickListener(new View.OnClickListener() {

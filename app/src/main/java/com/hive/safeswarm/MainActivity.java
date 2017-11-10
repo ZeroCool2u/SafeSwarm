@@ -7,6 +7,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -165,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start NewActivity.class
                 Intent myIntent = new Intent(MainActivity.this,Summon.class);
+                myIntent.putExtra("djiSDK", (Parcelable) mProduct);
                 startActivity(myIntent);
             }
         });

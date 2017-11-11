@@ -3,7 +3,6 @@ package com.hive.safeswarm;
 
 import android.Manifest;
 import android.content.Intent;
-import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,33 +14,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
 import dji.sdk.base.BaseComponent;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.sdkmanager.DJISDKManager;
-
-//NOTE: Initial registration will fail when the app is run using an AVD.
-// Safe Swarm must be run using a physical device due to the lack of WiFi support in AVDs.
-
-/*class LatLong {
-
-    public String lat;
-    public String lng;
-
-    public LatLong() {
-        // Default constructor required for calls to DataSnapshot.getValue(User.class)
-    }
-
-    public LatLong(String lat, String lng) {
-        this.lat = lat;
-        this.lng = lng;
-    }
-}*/
-
 
 public class MainActivity extends AppCompatActivity {
 
@@ -130,19 +107,6 @@ public class MainActivity extends AppCompatActivity {
         //Init DJI SDK Manager
         mHandler = new Handler(Looper.getMainLooper());
         DJISDKManager.getInstance().registerApp(this, mDJISDKManagerCallback);
-
-        // Write a message to the database
-        FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference();
-
-        //myRef.setValue("Hello, World!");
-        Location targetLocation = new Location("");//provider name is unnecessary
-        targetLocation.setLatitude(25.0d);//your coords of course
-        targetLocation.setLongitude(25.0d);
-
-        //LatLng current_latlng = new LatLng(25,25);
-        myRef.child("users").child("1").setValue(targetLocation);
-
 
         // Locate the deployButton in activity_main.xml
         deployButton = findViewById(R.id.MyButton);

@@ -1,9 +1,13 @@
 package com.hive.safeswarm;
 
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Looper;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -11,6 +15,7 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -19,6 +24,9 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import dji.sdk.base.BaseProduct;
 import dji.sdk.flightcontroller.FlightController;
@@ -28,19 +36,18 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
+    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
      * than this value.
      */
     private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
+    private static final int DEFAULT_ZOOM = 15;
     private GoogleMap mMap;
-    private LatLng userPosition;
     private double droneLocationLat = 181, droneLocationLng = 181;
     private Marker droneMarker = null;
     private FlightController mFlightController;
-    private LocationManager locationManager;
     /**
      * Provides access to the Location Settings API.
      */
@@ -63,16 +70,38 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
 
     private LocationSettingsRequest mLocationSettingsRequest;
 
-
-    private Boolean mRequestingLocationUpdates = true;
-
-
     private FusedLocationProviderClient mFusedLocationClient;
+
+    private FirebaseDatabase fbDataBase;
+    private DatabaseReference myRef;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(getApplicationContext(), "Look, honestly, we really need these permissions.", Toast.LENGTH_LONG).show();
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.VIBRATE,
+                            android.Manifest.permission.INTERNET, android.Manifest.permission.ACCESS_WIFI_STATE,
+                            android.Manifest.permission.WAKE_LOCK, android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                            android.Manifest.permission.ACCESS_NETWORK_STATE, android.Manifest.permission.ACCESS_FINE_LOCATION,
+                            android.Manifest.permission.CHANGE_WIFI_STATE, android.Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
+                            android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+                            android.Manifest.permission.READ_PHONE_STATE,
+                    }
+                    , 1);
+        }
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        mSettingsClient = LocationServices.getSettingsClient(this);
+
+        fbDataBase = FirebaseDatabase.getInstance();
+        myRef = fbDataBase.getReference();
+
+
         setContentView(R.layout.activity_summon);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -80,33 +109,40 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         mapFragment.getMapAsync(this);
         Bundle bundle = getIntent().getExtras();
 
+        //May not be required for this class, but leave as an example for now.
         BaseProduct mProduct = bundle.getParcelable("djiSDK");
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        mSettingsClient = LocationServices.getSettingsClient(this);
-
-        createLocationCallback();
-        createLocationRequest();
-        buildLocationSettingsRequest();
-
-        //mFusedLocationClient.requestLocationUpdates(LocationRequest.create(), pendingIntent).addOnCompleteListener(new onCompleteListener() {});
-
-
-        //locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //if ( locationManager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
-//
-        //}
-
-      /*  new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while(mRequestingLocationUpdates){
-
-                }
-            }
-        });*/
     }
+
+    /**
+     * Requests location updates from the FusedLocationApi. Note: we don't call this unless location
+     * runtime permission has been granted.
+     */
+    private void startLocationUpdates() {
+        // Begin by checking if the device has the necessary location settings.
+        mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
+                .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
+                    @SuppressLint("MissingPermission")
+                    @Override
+                    public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                        mFusedLocationClient.requestLocationUpdates(mLocationRequest,
+                                mLocationCallback, Looper.myLooper());
+
+                    }
+                });
+    }
+
+    /**
+     * Uses a {@link com.google.android.gms.location.LocationSettingsRequest.Builder} to build
+     * a {@link com.google.android.gms.location.LocationSettingsRequest} that is used for checking
+     * if a device has the needed location settings.
+     */
+    private void buildLocationSettingsRequest() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(mLocationRequest);
+        mLocationSettingsRequest = builder.build();
+    }
+
 
     /**
      * Sets up the location request. Android has two location request settings:
@@ -137,6 +173,7 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
+
     /**
      * Creates a callback for receiving location events.
      */
@@ -147,20 +184,14 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
                 super.onLocationResult(locationResult);
 
                 mCurrentLocation = locationResult.getLastLocation();
-                // Do action here
+                // Write users location to the database
+                myRef.child("users").child("1").setValue(mCurrentLocation);
+                LatLng userLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+                mMap.addMarker(new MarkerOptions().position(userLocation).title("Marker at your location"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, DEFAULT_ZOOM));
+                Toast.makeText(getApplicationContext(), "Updated the DB with current GPS location!", Toast.LENGTH_LONG).show();
             }
         };
-    }
-
-    /**
-     * Uses a {@link com.google.android.gms.location.LocationSettingsRequest.Builder} to build
-     * a {@link com.google.android.gms.location.LocationSettingsRequest} that is used for checking
-     * if a device has the needed location settings.
-     */
-    private void buildLocationSettingsRequest() {
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        mLocationSettingsRequest = builder.build();
     }
 
 
@@ -179,10 +210,11 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        createLocationCallback();
+        createLocationRequest();
+        buildLocationSettingsRequest();
+        startLocationUpdates();
+
     }
 
 

@@ -25,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String FLAG_CONNECTION_CHANGE = "dji_sdk_connection_change";
     private static final String TAG = MainActivity.class.getName();
     private static BaseProduct mProduct;
+    public DJISDKManager SDKMan;
     Button deployButton;
     Button summonButton;
     private Handler mHandler;
@@ -66,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(getApplicationContext(), "Registration Success!", Toast.LENGTH_LONG).show();
+                        SDKMan = DJISDKManager.getInstance();
                     }
                 });
             } else {
@@ -117,19 +119,21 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start NewActivity.class
                 Intent myIntent = new Intent(MainActivity.this,Deployment.class);
+                myIntent.putExtra("djiProduct", (Parcelable) mProduct);
+                myIntent.putExtra("djiManager", (Parcelable) SDKMan);
                 startActivity(myIntent);
             }
         });
 
-        // Locate the deployButton in activity_main.xml
+        // Locate the summonButton in activity_main.xml
         summonButton = findViewById(R.id.MySummonButton);
 
-        // Capture deployButton clicks
+        // Capture summonButton clicks
         summonButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
 
                 // Start NewActivity.class
-                Intent myIntent = new Intent(MainActivity.this,Summon.class);
+                Intent myIntent = new Intent(MainActivity.this, Summon.class);
                 myIntent.putExtra("djiSDK", (Parcelable) mProduct);
                 startActivity(myIntent);
             }

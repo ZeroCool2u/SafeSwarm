@@ -45,6 +45,7 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
     private static final int DEFAULT_ZOOM = 15;
     private GoogleMap mMap;
+    //Unused for now. Planning on using in the future to show drones location with respect to user location.
     private double droneLocationLat = 181, droneLocationLng = 181;
     private Marker droneMarker = null;
     private FlightController mFlightController;
@@ -107,9 +108,9 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        Bundle bundle = getIntent().getExtras();
 
         //May not be required for this class, but leave as an example for now.
+        Bundle bundle = getIntent().getExtras();
         BaseProduct mProduct = bundle.getParcelable("djiSDK");
 
     }

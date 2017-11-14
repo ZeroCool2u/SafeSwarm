@@ -41,6 +41,7 @@ public class Deployment extends AppCompatActivity {
 
     public static WaypointMission.Builder waypointMissionBuilder;
     private static boolean FIRST_TRY = true;
+    private static Waypoint initWaypoint;
     private DJISDKManager SDKMan;
     private BaseProduct mProduct;
     private double droneLocationLat, droneLocationLng;
@@ -48,7 +49,6 @@ public class Deployment extends AppCompatActivity {
     private float altitude = 10.0f;
     private float mSpeed = 9.0f;
     private List<Waypoint> waypointList = new ArrayList<>();
-    private Waypoint initWaypoint;
     private FlightController mFlightController;
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -212,6 +212,7 @@ public class Deployment extends AppCompatActivity {
     }
 
     private void createInitMission() {
+        initWaypoint = new Waypoint(targetLocation.getLatitude(), targetLocation.getLongitude(), altitude);
         //Add Waypoints to Waypoint arraylist;
         if (waypointMissionBuilder != null) {
             waypointList.add(initWaypoint);

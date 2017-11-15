@@ -10,6 +10,8 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -84,26 +86,34 @@ public class Deployment extends AppCompatActivity {
 
         }
 
+        //TODO: We need to further flesh out the logic here for after the mission is executed. Note that if it's successful, the drone has already gone home.
         @Override
         public void onExecutionFinish(@Nullable final DJIError error) {
             Toast.makeText(getApplicationContext(), "Execution finished: " + (error == null ? "Success!" : error.getDescription()), Toast.LENGTH_LONG).show();
             if (error != null) {
-                mFlightController.startGoHome(new CommonCallbacks.CompletionCallback() {
-                    @Override
-                    public void onResult(DJIError djiError) {
-                        Toast.makeText(getApplicationContext(), "Go Home Status: " + (djiError == null ? "Success!" : djiError.getDescription()), Toast.LENGTH_LONG).show();
-                    }
-                });
+                if (mFlightController != null) {
+
+                    mFlightController.startGoHome(new CommonCallbacks.CompletionCallback() {
+                        @Override
+                        public void onResult(DJIError djiError) {
+                            Toast.makeText(getApplicationContext(), "Go Home Status: " + (djiError == null ? "Success!" : djiError.getDescription()), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                } else {
+                    initFlightController();
+                }
             } else {
-                mFlightController.startLanding(new CommonCallbacks.CompletionCallback() {
-                    @Override
-                    public void onResult(DJIError djiError) {
-                        Toast.makeText(getApplicationContext(), "Landing Status: " + (djiError == null ? "Success!" : djiError.getDescription()), Toast.LENGTH_LONG).show();
-                    }
-                });
+                beginLanding();
             }
         }
     };
+
+    //Utility function for calculating the midpoint between the target location and the drones
+    //start location, so that we can provide the minimum required N Waypoints s.t. N > 1.
+    private static LatLng midWayPoint(LatLng start, LatLng dest) {
+        LatLngBounds tempBound = new LatLngBounds(start, dest);
+        return tempBound.getCenter();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -168,9 +178,16 @@ public class Deployment extends AppCompatActivity {
             );
         } else {
             Toast.makeText(getApplicationContext(), "WARNING: Takeoff failed due to null FC object!", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "ALERT: Attempting to reinit the FC!", Toast.LENGTH_LONG).show();
+            initFlightController();
+            Toast.makeText(getApplicationContext(), "ALERT: FC reinitialized, attempting takeoff again!", Toast.LENGTH_LONG).show();
+            //TODO: Watch the fuck out, there's some infinite loop potential here and there is a path in the next function that resolves in a callback.
+            beginTakeOff();
         }
     }
 
+    //TODO: beginLanding and completeLanding need some additional logic to ensure the drone eventually lands if we fail a few times.
+    //TODO: Also need to decide where/how to actually use this.
     private void beginLanding() {
         if (mFlightController != null) {
             mFlightController.startLanding(
@@ -178,13 +195,33 @@ public class Deployment extends AppCompatActivity {
                         @Override
                         public void onResult(DJIError djiError) {
                             if (djiError != null) {
-                                Toast.makeText(getApplicationContext(), "WARNING: Landing failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "WARNING: Landing start failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
                             } else {
                                 Toast.makeText(getApplicationContext(), "ALERT: Landing in progress.", Toast.LENGTH_LONG).show();
+                                completeLanding();
                             }
                         }
                     }
             );
+        } else {
+            initFlightController();
+            //TODO: Watch the fuck out again for this recursion! Similar caution should be taken to the beginTakeOff TODO above.
+            beginLanding();
+        }
+    }
+
+    private void completeLanding() {
+        if (mFlightController != null) {
+            mFlightController.confirmLanding(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError djiError) {
+                    if (djiError != null) {
+                        Toast.makeText(getApplicationContext(), "WARNING: Landing failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(getApplicationContext(), "ALERT: Landing complete!", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
         }
     }
 
@@ -193,7 +230,7 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onResult(DJIError error) {
                 if (error == null) {
-                    Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded succesfully!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded successfully!", Toast.LENGTH_LONG).show();
                     startWaypointMission();
                 } else {
                     Toast.makeText(getApplicationContext(), "WARNING: Mission upload failed. Error: " + error.getDescription() + " retrying...", Toast.LENGTH_LONG).show();

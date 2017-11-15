@@ -120,7 +120,8 @@ public class MainActivity extends AppCompatActivity {
                 // Start NewActivity.class
                 Intent myIntent = new Intent(MainActivity.this,Deployment.class);
                 myIntent.putExtra("djiProduct", (Parcelable) mProduct);
-                myIntent.putExtra("djiManager", (Parcelable) SDKMan);
+                //SDKManager is not parcelable.
+                //myIntent.putExtra("djiManager", (Parcelable) SDKMan);
                 startActivity(myIntent);
             }
         });
@@ -134,7 +135,8 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start NewActivity.class
                 Intent myIntent = new Intent(MainActivity.this, Summon.class);
-                myIntent.putExtra("djiSDK", (Parcelable) mProduct);
+                //SDKManager is not parcelable.
+                //myIntent.putExtra("djiSDK", (Parcelable) mProduct);
                 startActivity(myIntent);
             }
         });

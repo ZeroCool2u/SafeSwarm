@@ -18,6 +18,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import dji.common.error.DJIError;
 import dji.common.flightcontroller.FlightControllerState;
@@ -41,8 +42,9 @@ public class Deployment extends AppCompatActivity {
 
     public static WaypointMission.Builder waypointMissionBuilder;
     private static boolean FIRST_TRY = true;
-    private static Waypoint initWaypoint;
-    private DJISDKManager SDKMan;
+    private static Waypoint initWaypoint, secondWaypoint;
+    private static Location targetLocation = new Location("fused");
+    private DJISDKManager SDKMan = DJISDKManager.getInstance();
     private BaseProduct mProduct;
     private double droneLocationLat, droneLocationLng;
     //These values are in units of meters and meters/second respectively.
@@ -61,7 +63,6 @@ public class Deployment extends AppCompatActivity {
     private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     private FirebaseDatabase fbDataBase;
     private DatabaseReference myRef;
-    private Location targetLocation;
     private WaypointMissionOperatorListener eventNotificationListener = new WaypointMissionOperatorListener() {
         @Override
         public void onDownloadUpdate(WaypointMissionDownloadEvent downloadEvent) {
@@ -112,20 +113,27 @@ public class Deployment extends AppCompatActivity {
         //May not be required for this class, but leave as an example for now.
         Bundle bundle = getIntent().getExtras();
         mProduct = bundle.getParcelable("djiProduct");
-        SDKMan = bundle.getParcelable("djiManager");
+        //SDKMan is not parcelable.
+        //SDKMan = bundle.getParcelable("djiManager");
 
         initFlightController();
         addListener();
 
         // Get a reference to our posts
         final FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference ref = database.getReference();
+        DatabaseReference ref = database.getReference("users/1/");
 
         ref.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                targetLocation = dataSnapshot.getValue(Location.class);
-                //Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
+                //targetLocation = dataSnapshot.getValue(Location.class);
+                System.out.println(dataSnapshot.getValue());
+                Map<String, Object> targetLocation2 = (Map<String, Object>) dataSnapshot.getValue();
+                targetLocation.setLatitude(Double.parseDouble(targetLocation2.get("latitude").toString()));
+                targetLocation.setLongitude(Double.parseDouble(targetLocation2.get("longitude").toString()));
+                targetLocation.setAltitude(Double.parseDouble(targetLocation2.get("altitude").toString()));
+                System.out.println("TARGET");
+                Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
                 if (FIRST_TRY) {
                     FIRST_TRY = false;
                     createInitMission();
@@ -213,12 +221,15 @@ public class Deployment extends AppCompatActivity {
 
     private void createInitMission() {
         initWaypoint = new Waypoint(targetLocation.getLatitude(), targetLocation.getLongitude(), altitude);
+        secondWaypoint = new Waypoint(41.6506621, -91.6262974, altitude);
         //Add Waypoints to Waypoint arraylist;
         if (waypointMissionBuilder != null) {
+            waypointList.add(secondWaypoint);
             waypointList.add(initWaypoint);
             waypointMissionBuilder.waypointList(waypointList).waypointCount(waypointList.size());
         } else {
             waypointMissionBuilder = new WaypointMission.Builder();
+            waypointList.add(secondWaypoint);
             waypointList.add(initWaypoint);
             waypointMissionBuilder.waypointList(waypointList).waypointCount(waypointList.size());
         }
@@ -293,7 +304,7 @@ public class Deployment extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "ALERT: Mission build and load complete. Execution pending.", Toast.LENGTH_LONG).show();
 
         } else {
-            Toast.makeText(getApplicationContext(), "WARNING: Mission build and load failed!", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "WARNING: Mission build and load failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
         }
     }
 

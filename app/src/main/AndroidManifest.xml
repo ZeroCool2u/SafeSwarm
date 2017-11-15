@@ -91,7 +91,13 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.hive.safeswarm.MainActivity" />
         </activity>
-        <activity android:name=".Deployment"></activity>
+        <activity
+            android:name=".Deployment"
+            android:screenOrientation="reverseLandscape">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.hive.safeswarm.MainActivity" />
+        </activity>
     </application>
 
 </manifest>

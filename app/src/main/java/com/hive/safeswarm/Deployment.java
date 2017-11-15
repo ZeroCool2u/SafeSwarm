@@ -166,6 +166,8 @@ public class Deployment extends AppCompatActivity {
                         }
                     }
             );
+        } else {
+            Toast.makeText(getApplicationContext(), "WARNING: Takeoff failed due to null FC object!", Toast.LENGTH_LONG).show();
         }
     }
 

@@ -28,7 +28,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import dji.sdk.base.BaseProduct;
 import dji.sdk.flightcontroller.FlightController;
 
 public class Summon extends FragmentActivity implements OnMapReadyCallback {
@@ -111,7 +110,7 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
 
         //May not be required for this class, but leave as an example for now.
         Bundle bundle = getIntent().getExtras();
-        BaseProduct mProduct = bundle.getParcelable("djiSDK");
+        //BaseProduct mProduct = bundle.getParcelable("djiSDK");
 
     }
 

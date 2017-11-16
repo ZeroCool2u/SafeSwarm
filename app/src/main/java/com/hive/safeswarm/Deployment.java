@@ -32,6 +32,7 @@ import dji.common.mission.waypoint.WaypointMissionFinishedAction;
 import dji.common.mission.waypoint.WaypointMissionFlightPathMode;
 import dji.common.mission.waypoint.WaypointMissionHeadingMode;
 import dji.common.mission.waypoint.WaypointMissionUploadEvent;
+import dji.common.model.LocationCoordinate2D;
 import dji.common.util.CommonCallbacks;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.flightcontroller.FlightController;
@@ -44,7 +45,7 @@ public class Deployment extends AppCompatActivity {
 
     public static WaypointMission.Builder waypointMissionBuilder;
     private static boolean FIRST_TRY = true;
-    private static Waypoint initWaypoint, secondWaypoint;
+    private static Waypoint initWaypoint, midWaypoint;
     private static Location targetLocation = new Location("fused");
     private DJISDKManager SDKMan = DJISDKManager.getInstance();
     private BaseProduct mProduct;
@@ -54,6 +55,7 @@ public class Deployment extends AppCompatActivity {
     private float mSpeed = 9.0f;
     private List<Waypoint> waypointList = new ArrayList<>();
     private FlightController mFlightController;
+    private LatLng startLatLng, endLatLng, midLatLng;
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -260,15 +262,35 @@ public class Deployment extends AppCompatActivity {
 
     private void createInitMission() {
         initWaypoint = new Waypoint(targetLocation.getLatitude(), targetLocation.getLongitude(), altitude);
-        secondWaypoint = new Waypoint(41.6506621, -91.6262974, altitude);
+        int distance_in_lat = 10;// In meters
+        int degree_in_lat = 90;// +90 should mean north
+        Double generated_lat = targetLocation.getLatitude() + (distance_in_lat/6378000)*(180/degree_in_lat);
+        // Currently midWaypoint is set 10 meters north than the target destination that we got from database
+        midWaypoint = new Waypoint(generated_lat, -91.6262974, altitude);
+        // Below lat long is used for calculating the middle point between the target and home coordinates
+        endLatLng = new LatLng(targetLocation.getLatitude(), targetLocation.getLongitude());
+        System.out.println("Waypoints are set");
+        mFlightController.getHomeLocation(new CommonCallbacks.CompletionCallbackWith<LocationCoordinate2D>() {
+            @Override
+            public void onSuccess(LocationCoordinate2D locationCoordinate2D) {
+                startLatLng = new LatLng(locationCoordinate2D.getLatitude(),locationCoordinate2D.getLongitude());
+                midLatLng = midWayPoint(startLatLng,endLatLng);
+                midWaypoint = new Waypoint(midLatLng.latitude, midLatLng.longitude, altitude);
+            }
+
+            @Override
+            public void onFailure(DJIError djiError) {
+
+            }
+        });
         //Add Waypoints to Waypoint arraylist;
         if (waypointMissionBuilder != null) {
-            waypointList.add(secondWaypoint);
+            waypointList.add(midWaypoint);
             waypointList.add(initWaypoint);
             waypointMissionBuilder.waypointList(waypointList).waypointCount(waypointList.size());
         } else {
             waypointMissionBuilder = new WaypointMission.Builder();
-            waypointList.add(secondWaypoint);
+            waypointList.add(midWaypoint);
             waypointList.add(initWaypoint);
             waypointMissionBuilder.waypointList(waypointList).waypointCount(waypointList.size());
         }

@@ -56,15 +56,15 @@ public class Deployment extends AppCompatActivity {
     private List<Waypoint> waypointList = new ArrayList<>();
     private FlightController mFlightController;
     private LatLng startLatLng, endLatLng, midLatLng;
+    private WaypointMissionOperator instance;
+    private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.GO_HOME;
+    private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             onProductConnectionChange();
         }
     };
-    private WaypointMissionOperator instance;
-    private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.GO_HOME;
-    private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     private FirebaseDatabase fbDataBase;
     private DatabaseReference myRef;
     private WaypointMissionOperatorListener eventNotificationListener = new WaypointMissionOperatorListener() {
@@ -128,7 +128,6 @@ public class Deployment extends AppCompatActivity {
         //SDKMan is not parcelable.
         //SDKMan = bundle.getParcelable("djiManager");
 
-        initFlightController();
         addListener();
 
         // Get a reference to our posts
@@ -147,10 +146,8 @@ public class Deployment extends AppCompatActivity {
                 System.out.println("TARGET");
                 Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
                 if (FIRST_TRY) {
+                    initFlightController();
                     FIRST_TRY = false;
-                    createInitMission();
-                    configWayPointMission();
-                    beginTakeOff();
                 }
             }
 
@@ -260,6 +257,17 @@ public class Deployment extends AppCompatActivity {
         });
     }
 
+    private void setHome() {
+        mFlightController.setHomeLocationUsingAircraftCurrentLocation(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onResult(DJIError djiError) {
+                if (djiError != null) {
+                    Toast.makeText(getApplicationContext(), "WARNING: Setting home location failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+
     private void createInitMission() {
         initWaypoint = new Waypoint(targetLocation.getLatitude(), targetLocation.getLongitude(), altitude);
         int distance_in_lat = 10;// In meters
@@ -270,6 +278,9 @@ public class Deployment extends AppCompatActivity {
         // Below lat long is used for calculating the middle point between the target and home coordinates
         endLatLng = new LatLng(targetLocation.getLatitude(), targetLocation.getLongitude());
         System.out.println("Waypoints are set");
+        if (mFlightController == null) {
+            initFlightController();
+        }
         mFlightController.getHomeLocation(new CommonCallbacks.CompletionCallbackWith<LocationCoordinate2D>() {
             @Override
             public void onSuccess(LocationCoordinate2D locationCoordinate2D) {
@@ -280,6 +291,8 @@ public class Deployment extends AppCompatActivity {
 
             @Override
             public void onFailure(DJIError djiError) {
+                Toast.makeText(getApplicationContext(), "WARNING: getHomeLocation Failed: " + (djiError == null ? "Successfully" : djiError.getDescription()), Toast.LENGTH_LONG).show();
+
 
             }
         });
@@ -305,6 +318,13 @@ public class Deployment extends AppCompatActivity {
         if (mProduct != null && mProduct.isConnected()) {
             if (mProduct instanceof Aircraft) {
                 mFlightController = ((Aircraft) mProduct).getFlightController();
+                if (FIRST_TRY) {
+                    FIRST_TRY = false;
+                    setHome();
+                    createInitMission();
+                    configWayPointMission();
+                    beginTakeOff();
+                }
             }
         }
 

@@ -68,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         Toast.makeText(getApplicationContext(), "Registration Success!", Toast.LENGTH_LONG).show();
                         SDKMan = DJISDKManager.getInstance();
+                        deployButton.setClickable(true);
+                        summonButton.setClickable(true);
                     }
                 });
             } else {
@@ -126,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        deployButton.setClickable(false);
+
         // Locate the summonButton in activity_main.xml
         summonButton = findViewById(R.id.MySummonButton);
 
@@ -140,6 +144,8 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(myIntent);
             }
         });
+
+        summonButton.setClickable(false);
 
     }
 

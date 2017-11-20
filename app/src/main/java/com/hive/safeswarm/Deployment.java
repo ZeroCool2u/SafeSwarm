@@ -3,6 +3,7 @@ package com.hive.safeswarm;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -122,11 +123,9 @@ public class Deployment extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_deployment);
 
-        //May not be required for this class, but leave as an example for now.
-        Bundle bundle = getIntent().getExtras();
-        mProduct = bundle.getParcelable("djiProduct");
-        //SDKMan is not parcelable.
-        //SDKMan = bundle.getParcelable("djiManager");
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(SafeSwarmApplication.FLAG_CONNECTION_CHANGE);
+        registerReceiver(mReceiver, filter);
 
         addListener();
 
@@ -144,10 +143,10 @@ public class Deployment extends AppCompatActivity {
                 targetLocation.setLongitude(Double.parseDouble(targetLocation2.get("longitude").toString()));
                 targetLocation.setAltitude(Double.parseDouble(targetLocation2.get("altitude").toString()));
                 System.out.println("TARGET");
-                Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
                 if (FIRST_TRY) {
                     initFlightController();
-                    FIRST_TRY = false;
+                    //FIRST_TRY = false;
                 }
             }
 
@@ -274,7 +273,7 @@ public class Deployment extends AppCompatActivity {
         int degree_in_lat = 90;// +90 should mean north
         Double generated_lat = targetLocation.getLatitude() + (distance_in_lat/6378000)*(180/degree_in_lat);
         // Currently midWaypoint is set 10 meters north than the target destination that we got from database
-        midWaypoint = new Waypoint(generated_lat, -91.6262974, altitude);
+        midWaypoint = new Waypoint(generated_lat, targetLocation.getLongitude(), altitude);
         // Below lat long is used for calculating the middle point between the target and home coordinates
         endLatLng = new LatLng(targetLocation.getLatitude(), targetLocation.getLongitude());
         System.out.println("Waypoints are set");
@@ -285,8 +284,10 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onSuccess(LocationCoordinate2D locationCoordinate2D) {
                 startLatLng = new LatLng(locationCoordinate2D.getLatitude(),locationCoordinate2D.getLongitude());
-                midLatLng = midWayPoint(startLatLng,endLatLng);
+                midLatLng = midWayPoint(endLatLng, startLatLng);
                 midWaypoint = new Waypoint(midLatLng.latitude, midLatLng.longitude, altitude);
+                Toast.makeText(getApplicationContext(), "ALERT: GetHomeLocation Successful! ", Toast.LENGTH_LONG).show();
+
             }
 
             @Override
@@ -314,17 +315,26 @@ public class Deployment extends AppCompatActivity {
     }
 
     private void initFlightController() {
-
+        BaseProduct mProduct = SafeSwarmApplication.getProductInstance();
         if (mProduct != null && mProduct.isConnected()) {
             if (mProduct instanceof Aircraft) {
                 mFlightController = ((Aircraft) mProduct).getFlightController();
                 if (FIRST_TRY) {
                     FIRST_TRY = false;
+                    Toast.makeText(getApplicationContext(), "ALERT: FC Init successful! ", Toast.LENGTH_LONG).show();
                     setHome();
                     createInitMission();
                     configWayPointMission();
+                    //TODO: Remember to turn this on before we test the takeoff.
                     beginTakeOff();
                 }
+            }
+        } else {
+            if (mProduct == null) {
+                //Toast.makeText(getApplicationContext(), "WARNING: Product object is null! ", Toast.LENGTH_LONG).show();
+
+            } else if (mProduct != null && !mProduct.isConnected()) {
+                //Toast.makeText(getApplicationContext(), "WARNING: Product object is not null and is not connected! ", Toast.LENGTH_LONG).show();
             }
         }
 
@@ -335,6 +345,7 @@ public class Deployment extends AppCompatActivity {
                 public void onUpdate(@NonNull FlightControllerState djiFlightControllerCurrentState) {
                     droneLocationLat = djiFlightControllerCurrentState.getAircraftLocation().getLatitude();
                     droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();
+                    Toast.makeText(getApplicationContext(), "ALERT: Drone location updated! ", Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -387,6 +398,24 @@ public class Deployment extends AppCompatActivity {
         } else {
             Toast.makeText(getApplicationContext(), "WARNING: Mission build and load failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initFlightController();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(mReceiver);
+        removeListener();
+        super.onDestroy();
     }
 
 

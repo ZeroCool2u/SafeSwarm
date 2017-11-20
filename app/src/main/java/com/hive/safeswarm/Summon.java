@@ -28,8 +28,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import dji.sdk.flightcontroller.FlightController;
-
 public class Summon extends FragmentActivity implements OnMapReadyCallback {
 
     /**
@@ -47,7 +45,7 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
     //Unused for now. Planning on using in the future to show drones location with respect to user location.
     private double droneLocationLat = 181, droneLocationLng = 181;
     private Marker droneMarker = null;
-    private FlightController mFlightController;
+    
     /**
      * Provides access to the Location Settings API.
      */
@@ -108,10 +106,6 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        //May not be required for this class, but leave as an example for now.
-        Bundle bundle = getIntent().getExtras();
-        //BaseProduct mProduct = bundle.getParcelable("djiSDK");
-
     }
 
     /**
@@ -143,7 +137,6 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         mLocationSettingsRequest = builder.build();
     }
 
-
     /**
      * Sets up the location request. Android has two location request settings:
      * {@code ACCESS_COARSE_LOCATION} and {@code ACCESS_FINE_LOCATION}. These settings control
@@ -173,7 +166,6 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-
     /**
      * Creates a callback for receiving location events.
      */
@@ -187,15 +179,13 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
                 // Write users location to the database
                 myRef.child("users").child("1").setValue(mCurrentLocation);
                 LatLng userLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(userLocation).title("Marker at your location"));
+                mMap.clear();
+                mMap.addMarker(new MarkerOptions().position(userLocation).title("Users Current Location"));
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, DEFAULT_ZOOM));
                 Toast.makeText(getApplicationContext(), "Updated the DB with current GPS location!", Toast.LENGTH_LONG).show();
             }
         };
     }
-
-
-
 
     /**
      * Manipulates the map once available.
@@ -215,6 +205,21 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
         buildLocationSettingsRequest();
         startLocationUpdates();
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
 

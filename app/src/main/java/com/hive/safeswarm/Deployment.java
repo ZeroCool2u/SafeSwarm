@@ -322,7 +322,6 @@ public class Deployment extends AppCompatActivity {
                 midLatLng = midWayPoint(endLatLng, startLatLng);
                 midWaypoint = new Waypoint(midLatLng.latitude, midLatLng.longitude, altitude);
                 Toast.makeText(getApplicationContext(), "ALERT: GetHomeLocation Successful! ", Toast.LENGTH_LONG).show();
-                System.out.println("Getting Home successful!");
 
             }
 

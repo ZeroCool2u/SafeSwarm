@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -33,7 +34,7 @@ import dji.common.mission.waypoint.WaypointMissionFinishedAction;
 import dji.common.mission.waypoint.WaypointMissionFlightPathMode;
 import dji.common.mission.waypoint.WaypointMissionHeadingMode;
 import dji.common.mission.waypoint.WaypointMissionUploadEvent;
-import dji.common.model.LocationCoordinate2D;
+import dji.common.useraccount.UserAccountState;
 import dji.common.util.CommonCallbacks;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.flightcontroller.FlightController;
@@ -41,9 +42,11 @@ import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener;
 import dji.sdk.products.Aircraft;
 import dji.sdk.sdkmanager.DJISDKManager;
+import dji.sdk.useraccount.UserAccountManager;
 
 public class Deployment extends AppCompatActivity {
 
+    private static final String TAG = MainActivity.class.getName();
     public static WaypointMission.Builder waypointMissionBuilder;
     private static boolean FIRST_TRY = true;
     private static Waypoint initWaypoint, midWaypoint;
@@ -56,16 +59,16 @@ public class Deployment extends AppCompatActivity {
     private float mSpeed = 9.0f;
     private List<Waypoint> waypointList = new ArrayList<>();
     private FlightController mFlightController;
-    private LatLng startLatLng, endLatLng, midLatLng;
-    private WaypointMissionOperator instance;
-    private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.GO_HOME;
-    private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             onProductConnectionChange();
         }
     };
+    private LatLng startLatLng, endLatLng, midLatLng;
+    private WaypointMissionOperator instance;
+    private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.GO_HOME;
+    private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     private FirebaseDatabase fbDataBase;
     private DatabaseReference myRef;
     private WaypointMissionOperatorListener eventNotificationListener = new WaypointMissionOperatorListener() {
@@ -94,8 +97,8 @@ public class Deployment extends AppCompatActivity {
         public void onExecutionFinish(@Nullable final DJIError error) {
             Toast.makeText(getApplicationContext(), "Execution finished: " + (error == null ? "Success!" : error.getDescription()), Toast.LENGTH_LONG).show();
             if (error != null) {
+                Log.e(TAG, "WARNING: Mission execution failure!");
                 if (mFlightController != null) {
-
                     mFlightController.startGoHome(new CommonCallbacks.CompletionCallback() {
                         @Override
                         public void onResult(DJIError djiError) {
@@ -103,9 +106,12 @@ public class Deployment extends AppCompatActivity {
                         }
                     });
                 } else {
+                    Log.e(TAG, "Mission execution failure and FC null, reiniting FC now.");
                     initFlightController();
+
                 }
             } else {
+                Log.e(TAG, "Mission execution success, now landing.");
                 beginLanding();
             }
         }
@@ -137,16 +143,14 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 //targetLocation = dataSnapshot.getValue(Location.class);
-                System.out.println(dataSnapshot.getValue());
                 Map<String, Object> targetLocation2 = (Map<String, Object>) dataSnapshot.getValue();
                 targetLocation.setLatitude(Double.parseDouble(targetLocation2.get("latitude").toString()));
                 targetLocation.setLongitude(Double.parseDouble(targetLocation2.get("longitude").toString()));
                 targetLocation.setAltitude(Double.parseDouble(targetLocation2.get("altitude").toString()));
-                System.out.println("TARGET");
                 //Toast.makeText(getApplicationContext(), "ALERT: Target location updated.", Toast.LENGTH_LONG).show();
                 if (FIRST_TRY) {
-                    initFlightController();
-                    //FIRST_TRY = false;
+                    Log.v(TAG, "Starting first attempt!");
+                    loginAccount();
                 }
             }
 
@@ -167,20 +171,24 @@ public class Deployment extends AppCompatActivity {
                         public void onResult(DJIError djiError) {
                             if (djiError != null) {
                                 Toast.makeText(getApplicationContext(), "WARNING: Takeoff failed!", Toast.LENGTH_LONG).show();
+                                Log.v(TAG, "Takeoff Failed");
                             } else {
                                 Toast.makeText(getApplicationContext(), "ALERT: Takeoff success!", Toast.LENGTH_LONG).show();
+                                Log.v(TAG, "Takeoff Success");
+                                //TODO: We need to figure out how to pause here before calling the upload function until we're ACTUALLY done taking off. 
                                 uploadWayPointMission();
                             }
                         }
                     }
             );
         } else {
-            Toast.makeText(getApplicationContext(), "WARNING: Takeoff failed due to null FC object!", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Takeoff Failure due to null FC!");
+/*            Toast.makeText(getApplicationContext(), "WARNING: Takeoff failed due to null FC object!", Toast.LENGTH_LONG).show();
             Toast.makeText(getApplicationContext(), "ALERT: Attempting to reinit the FC!", Toast.LENGTH_LONG).show();
             initFlightController();
             Toast.makeText(getApplicationContext(), "ALERT: FC reinitialized, attempting takeoff again!", Toast.LENGTH_LONG).show();
             //TODO: Watch the fuck out, there's some infinite loop potential here and there is a path in the next function that resolves in a callback.
-            beginTakeOff();
+            beginTakeOff();*/
         }
     }
 
@@ -215,8 +223,11 @@ public class Deployment extends AppCompatActivity {
                 public void onResult(DJIError djiError) {
                     if (djiError != null) {
                         Toast.makeText(getApplicationContext(), "WARNING: Landing failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Landing failed with error: " + djiError.getDescription());
                     } else {
                         Toast.makeText(getApplicationContext(), "ALERT: Landing complete!", Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Landing Complete!");
+
                     }
                 }
             });
@@ -224,18 +235,32 @@ public class Deployment extends AppCompatActivity {
     }
 
     private void uploadWayPointMission() {
-        getWaypointMissionOperator().uploadMission(new CommonCallbacks.CompletionCallback() {
-            @Override
-            public void onResult(DJIError error) {
-                if (error == null) {
-                    Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded successfully!", Toast.LENGTH_LONG).show();
-                    startWaypointMission();
-                } else {
-                    Toast.makeText(getApplicationContext(), "WARNING: Mission upload failed. Error: " + error.getDescription() + " retrying...", Toast.LENGTH_LONG).show();
-                    getWaypointMissionOperator().retryUploadMission(null);
+        Log.e(TAG, "Attempting mission upload!");
+        FlightControllerState currentState = mFlightController.getState();
+        boolean motorsOn = currentState.areMotorsOn();
+        boolean isFlying = currentState.isFlying();
+        Log.e(TAG, "FC state retrieved!");
+        if (motorsOn && isFlying) {
+            getWaypointMissionOperator().uploadMission(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError error) {
+                    if (error == null) {
+                        Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded successfully!", Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Mission upload success, beginning execution");
+                        startWaypointMission();
+                    } else {
+                        Toast.makeText(getApplicationContext(), "WARNING: Mission upload failed. Error: " + error.getDescription() + " retrying...", Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Mission upload failed with error: " + error.getDescription() + "Now retrying.");
+                        getWaypointMissionOperator().retryUploadMission(null);
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Log.e(TAG, "FC State not suitable for upload yet!");
+            Log.e(TAG, "Current Motor State:" + motorsOn);
+            Log.e(TAG, "Current isFlying State: " + isFlying);
+            uploadWayPointMission();
+        }
     }
 
     private void startWaypointMission() {
@@ -243,6 +268,12 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onResult(DJIError error) {
                 Toast.makeText(getApplicationContext(), "Mission Started: " + (error == null ? "Successfully" : error.getDescription()), Toast.LENGTH_LONG).show();
+                if (error == null) {
+                    Log.e(TAG, "Waypoint Mission started successfully!");
+                } else {
+                    Log.e(TAG, "Attempting to restart mission!");
+                    startWaypointMission();
+                }
             }
         });
     }
@@ -262,6 +293,9 @@ public class Deployment extends AppCompatActivity {
             public void onResult(DJIError djiError) {
                 if (djiError != null) {
                     Toast.makeText(getApplicationContext(), "WARNING: Setting home location failed! Error: " + djiError.getDescription(), Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getApplicationContext(), "ALERT: Setting home location success!", Toast.LENGTH_LONG).show();
+                    createInitMission();
                 }
             }
         });
@@ -269,34 +303,35 @@ public class Deployment extends AppCompatActivity {
 
     private void createInitMission() {
         initWaypoint = new Waypoint(targetLocation.getLatitude(), targetLocation.getLongitude(), altitude);
-        int distance_in_lat = 10;// In meters
+        midWaypoint = new Waypoint(41.6510579, -91.6259367, altitude);
+        /*int distance_in_lat = 10;// In meters
         int degree_in_lat = 90;// +90 should mean north
         Double generated_lat = targetLocation.getLatitude() + (distance_in_lat/6378000)*(180/degree_in_lat);
         // Currently midWaypoint is set 10 meters north than the target destination that we got from database
         midWaypoint = new Waypoint(generated_lat, targetLocation.getLongitude(), altitude);
         // Below lat long is used for calculating the middle point between the target and home coordinates
-        endLatLng = new LatLng(targetLocation.getLatitude(), targetLocation.getLongitude());
-        System.out.println("Waypoints are set");
+        endLatLng = new LatLng(targetLocation.getLatitude(), targetLocation.getLongitude());*/
+        Log.e(TAG, "Waypoints created!");
         if (mFlightController == null) {
             initFlightController();
         }
-        mFlightController.getHomeLocation(new CommonCallbacks.CompletionCallbackWith<LocationCoordinate2D>() {
+        /*mFlightController.getHomeLocation(new CommonCallbacks.CompletionCallbackWith<LocationCoordinate2D>() {
             @Override
             public void onSuccess(LocationCoordinate2D locationCoordinate2D) {
                 startLatLng = new LatLng(locationCoordinate2D.getLatitude(),locationCoordinate2D.getLongitude());
                 midLatLng = midWayPoint(endLatLng, startLatLng);
                 midWaypoint = new Waypoint(midLatLng.latitude, midLatLng.longitude, altitude);
                 Toast.makeText(getApplicationContext(), "ALERT: GetHomeLocation Successful! ", Toast.LENGTH_LONG).show();
+                System.out.println("Getting Home successful!");
 
             }
 
             @Override
             public void onFailure(DJIError djiError) {
                 Toast.makeText(getApplicationContext(), "WARNING: getHomeLocation Failed: " + (djiError == null ? "Successfully" : djiError.getDescription()), Toast.LENGTH_LONG).show();
-
-
+                System.out.println("Getting home location failed!");
             }
-        });
+        });*/
         //Add Waypoints to Waypoint arraylist;
         if (waypointMissionBuilder != null) {
             waypointList.add(midWaypoint);
@@ -308,10 +343,12 @@ public class Deployment extends AppCompatActivity {
             waypointList.add(initWaypoint);
             waypointMissionBuilder.waypointList(waypointList).waypointCount(waypointList.size());
         }
+        configWayPointMission();
     }
 
     private void onProductConnectionChange() {
-        initFlightController();
+        //initFlightController();
+        loginAccount();
     }
 
     private void initFlightController() {
@@ -321,12 +358,11 @@ public class Deployment extends AppCompatActivity {
                 mFlightController = ((Aircraft) mProduct).getFlightController();
                 if (FIRST_TRY) {
                     FIRST_TRY = false;
-                    Toast.makeText(getApplicationContext(), "ALERT: FC Init successful! ", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "ALERT: First FC Init successful! ", Toast.LENGTH_LONG).show();
                     setHome();
-                    createInitMission();
-                    configWayPointMission();
-                    //TODO: Remember to turn this on before we test the takeoff.
-                    beginTakeOff();
+
+                } else {
+                    Toast.makeText(getApplicationContext(), "ALERT: FC Init successful! ", Toast.LENGTH_LONG).show();
                 }
             }
         } else {
@@ -345,7 +381,7 @@ public class Deployment extends AppCompatActivity {
                 public void onUpdate(@NonNull FlightControllerState djiFlightControllerCurrentState) {
                     droneLocationLat = djiFlightControllerCurrentState.getAircraftLocation().getLatitude();
                     droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();
-                    Toast.makeText(getApplicationContext(), "ALERT: Drone location updated! ", Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(), "ALERT: Drone location updated! ", Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -394,10 +430,31 @@ public class Deployment extends AppCompatActivity {
         DJIError error = getWaypointMissionOperator().loadMission(waypointMissionBuilder.build());
         if (error == null) {
             Toast.makeText(getApplicationContext(), "ALERT: Mission build and load complete. Execution pending.", Toast.LENGTH_LONG).show();
-
+            //TODO: Remember to turn this on before we test the takeoff.
+            beginTakeOff();
         } else {
             Toast.makeText(getApplicationContext(), "WARNING: Mission build and load failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void loginAccount() {
+
+        UserAccountManager.getInstance().logIntoDJIUserAccount(this,
+                new CommonCallbacks.CompletionCallbackWith<UserAccountState>() {
+                    @Override
+                    public void onSuccess(final UserAccountState userAccountState) {
+                        Log.e(TAG, "Login Success");
+                        Toast.makeText(getApplicationContext(), "ALERT: Login Success", Toast.LENGTH_LONG).show();
+                        initFlightController();
+                    }
+
+                    @Override
+                    public void onFailure(DJIError error) {
+                        Log.e(TAG, "Login Failed");
+                        Toast.makeText(getApplicationContext(), "WARNING: Login Failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+
+                    }
+                });
     }
 
     @Override

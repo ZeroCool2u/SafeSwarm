@@ -175,8 +175,21 @@ public class Deployment extends AppCompatActivity {
                             } else {
                                 Toast.makeText(getApplicationContext(), "ALERT: Takeoff success!", Toast.LENGTH_LONG).show();
                                 Log.v(TAG, "Takeoff Success");
-                                //TODO: We need to figure out how to pause here before calling the upload function until we're ACTUALLY done taking off. 
-                                uploadWayPointMission();
+                                //TODO: We need to figure out how to pause here before calling the upload function until we're ACTUALLY done taking off.
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        //TODO: Fuck me, I got no idea if this will work, but fuck it, lets try.
+                                        while (!mFlightController.getState().isFlying()) {
+                                            try {
+                                                Thread.sleep(1000);
+                                            } catch (InterruptedException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                        uploadWayPointMission();
+                                    }
+                                });
                             }
                         }
                     }

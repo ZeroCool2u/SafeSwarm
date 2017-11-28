@@ -182,7 +182,7 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
                 mMap.clear();
                 mMap.addMarker(new MarkerOptions().position(userLocation).title("Users Current Location"));
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, DEFAULT_ZOOM));
-                Toast.makeText(getApplicationContext(), "Updated the DB with current GPS location!", Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(), "Updated the DB with current GPS location!", Toast.LENGTH_LONG).show();
             }
         };
     }

@@ -282,7 +282,7 @@ public class Deployment extends AppCompatActivity {
 
     private void startWaypointMission() {
         //TODO: This whole while loop is shot in the dark garbage. UPDATE: Doesn't help for shit.
-        while (getWaypointMissionOperator().getCurrentState().getName().equals("READY_TO_EXECUTE")) {
+        while (!getWaypointMissionOperator().getCurrentState().getName().equals("READY_TO_EXECUTE")) {
             try {
                 Log.v(TAG, "In the loop, aircraft is not ready to execute mission yet.");
                 Log.v(TAG, "Current State: " + getWaypointMissionOperator().getCurrentState().getName());

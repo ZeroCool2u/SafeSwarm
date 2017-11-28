@@ -79,7 +79,12 @@ public class Deployment extends AppCompatActivity {
 
         @Override
         public void onUploadUpdate(WaypointMissionUploadEvent uploadEvent) {
-
+            if (uploadEvent.getProgress() == null) {
+                Log.v(TAG, "WARNING: Null upload event implies there was an error!");
+            } else {
+                Log.v(TAG, "ALERT: Boolean summary is uploaded: " + uploadEvent.getProgress().isSummaryUploaded);
+                Log.v(TAG, "ALERT: Index number of waypoints uploaded (-1 if none): " + uploadEvent.getProgress().uploadedWaypointIndex);
+            }
         }
 
         @Override
@@ -89,6 +94,7 @@ public class Deployment extends AppCompatActivity {
 
         @Override
         public void onExecutionStart() {
+            Log.v(TAG, "Mission execution started!");
 
         }
 
@@ -176,20 +182,17 @@ public class Deployment extends AppCompatActivity {
                                 Toast.makeText(getApplicationContext(), "ALERT: Takeoff success!", Toast.LENGTH_LONG).show();
                                 Log.v(TAG, "Takeoff Success");
                                 //TODO: We need to figure out how to pause here before calling the upload function until we're ACTUALLY done taking off.
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        //TODO: Fuck me, I got no idea if this will work, but fuck it, lets try.
-                                        while (!mFlightController.getState().isFlying()) {
-                                            try {
-                                                Thread.sleep(1000);
-                                            } catch (InterruptedException e) {
-                                                e.printStackTrace();
-                                            }
-                                        }
-                                        uploadWayPointMission();
+                                while (mFlightController.getState().getAircraftLocation().getAltitude() < 1.2) {
+                                    try {
+                                        Log.v(TAG, "In the loop, state is not flying currently.");
+                                        Thread.sleep(500);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
                                     }
-                                });
+                                }
+                                Log.v(TAG, "ALERT: We are in flight!!!");
+                                Toast.makeText(getApplicationContext(), "ALERT: WE ARE FLYING!", Toast.LENGTH_LONG).show();
+                                uploadWayPointMission();
                             }
                         }
                     }
@@ -258,12 +261,13 @@ public class Deployment extends AppCompatActivity {
                 @Override
                 public void onResult(DJIError error) {
                     if (error == null) {
-                        Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded successfully!", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(), "ALERT: Mission uploaded successfully!", Toast.LENGTH_LONG).show();
                         Log.e(TAG, "Mission upload success, beginning execution");
+                        //TODO: ENABLE THIS FOR TESTING!!!
                         startWaypointMission();
                     } else {
-                        Toast.makeText(getApplicationContext(), "WARNING: Mission upload failed. Error: " + error.getDescription() + " retrying...", Toast.LENGTH_LONG).show();
-                        Log.e(TAG, "Mission upload failed with error: " + error.getDescription() + "Now retrying.");
+                        //Toast.makeText(getApplicationContext(), "WARNING: Mission upload failed. Error: " + error.getDescription() + " retrying...", Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Mission upload failed with error: " + error.getDescription() + " Now retrying.");
                         getWaypointMissionOperator().retryUploadMission(null);
                     }
                 }
@@ -277,10 +281,21 @@ public class Deployment extends AppCompatActivity {
     }
 
     private void startWaypointMission() {
+        //TODO: This whole while loop is shot in the dark garbage. UPDATE: Doesn't help for shit.
+        while (getWaypointMissionOperator().getCurrentState().getName().equals("READY_TO_EXECUTE")) {
+            try {
+                Log.v(TAG, "In the loop, aircraft is not ready to execute mission yet.");
+                Log.v(TAG, "Current State: " + getWaypointMissionOperator().getCurrentState().getName());
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        //TODO: Why the fuck doesn't this work?
         getWaypointMissionOperator().startMission(new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError error) {
-                Toast.makeText(getApplicationContext(), "Mission Started: " + (error == null ? "Successfully" : error.getDescription()), Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Attempting mission start: " + (error == null ? "Successfully" : error.getDescription()));
                 if (error == null) {
                     Log.e(TAG, "Waypoint Mission started successfully!");
                 } else {

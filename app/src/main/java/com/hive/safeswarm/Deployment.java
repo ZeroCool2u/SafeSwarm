@@ -236,6 +236,44 @@ public class Deployment extends AppCompatActivity {
                 }
             }
         });
+        theBrain.getLandingProtectionEnabled(new CommonCallbacks.CompletionCallbackWith<Boolean>() {
+            @Override
+            public void onSuccess(Boolean lpEnabled) {
+                if (lpEnabled) {
+                    Log.e(TAG, "WARNING: Landing Protection is enabled. Attempting to disarm.");
+                    theBrain.setLandingProtectionEnabled(false, new CommonCallbacks.CompletionCallback() {
+                        @Override
+                        public void onResult(DJIError djiError) {
+                            if (djiError != null) {
+                                Log.e(TAG, "WARNING: Error disarming landing protection: " + djiError.getDescription());
+                                Log.e(TAG, "WARNING: Manually landing confirmation may be required due to landing protection.");
+                            } else {
+                                Log.v(TAG, "ALERT: Landing protection disarmed successfully.");
+                            }
+
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(DJIError djiError) {
+                Log.e(TAG, "WARNING: Failed to retrieve Landing Protection State: " + djiError.toString());
+                Log.e(TAG, "WARNING: Attempting to disarm Landing Protection despite unknown state." + djiError.getDescription());
+                theBrain.setLandingProtectionEnabled(false, new CommonCallbacks.CompletionCallback() {
+                    @Override
+                    public void onResult(DJIError djiError) {
+                        if (djiError != null) {
+                            Log.e(TAG, "WARNING: Error disarming landing protection and state is unknown: " + djiError.getDescription());
+                            Log.e(TAG, "WARNING: Manually landing confirmation may be required due to unknown landing protection state.");
+                        } else {
+                            Log.v(TAG, "ALERT: Landing protection disarmed successfully.");
+                        }
+
+                    }
+                });
+            }
+        });
         theBrain.setPrecisionLandingEnabled(true, new CommonCallbacks.CompletionCallback() {
             //Cautious, but optimistic.
             @Override
@@ -310,7 +348,13 @@ public class Deployment extends AppCompatActivity {
                                         e.printStackTrace();
                                     }
                                 }
-                                completeLanding();
+                                while (mFlightController.getState().isFlying()) {
+                                    if (mFlightController.getState().isLandingConfirmationNeeded()) {
+                                        Log.v(TAG, "ALERT: Landing confirmation required. Providing now.");
+                                        completeLanding();
+                                    }
+                                }
+                                Log.v(TAG, "ALERT: Mission Successful. Ready for redeployment.");
                             }
                         }
                     }

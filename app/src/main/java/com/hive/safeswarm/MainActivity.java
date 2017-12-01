@@ -85,41 +85,41 @@ public class MainActivity extends AppCompatActivity {
         if (null != mProduct && mProduct.isConnected()) {
             Log.v(TAG, "refreshSDK: True");
             deployButton.setEnabled(true);
-            Toast.makeText(getApplicationContext(), "ALERT: Product object exists and we are connected!", Toast.LENGTH_LONG).show();
-
+            Toast.makeText(getApplicationContext(), "ALERT: All systems nominal. Ready to launch.", Toast.LENGTH_LONG).show();
+            Log.v(TAG, "ALERT: All systems nominal. Ready to launch.");
         } else {
             Log.v(TAG, "refreshSDK: False");
             deployButton.setEnabled(false);
-            Toast.makeText(getApplicationContext(), "WARNING: Product connection error!", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "WARNING: System connection is not ready. We cannot deploy.");
         }
     }
 
     @Override
     public void onResume() {
-        Log.e(TAG, "onResume");
+        Log.v(TAG, "onResume");
         super.onResume();
     }
 
     @Override
     public void onPause() {
-        Log.e(TAG, "onPause");
+        Log.v(TAG, "onPause");
         super.onPause();
     }
 
     @Override
     public void onStop() {
-        Log.e(TAG, "onStop");
+        Log.v(TAG, "onStop");
         super.onStop();
     }
 
     public void onReturn(View view) {
-        Log.e(TAG, "onReturn");
+        Log.v(TAG, "onReturn");
         this.finish();
     }
 
     @Override
     protected void onDestroy() {
-        Log.e(TAG, "onDestroy");
+        Log.v(TAG, "onDestroy");
         unregisterReceiver(mReceiver);
         super.onDestroy();
     }

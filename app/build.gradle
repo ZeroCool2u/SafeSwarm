@@ -7,8 +7,8 @@ android {
         minSdkVersion 19
         targetSdkVersion 26
         multiDexEnabled true
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -34,6 +34,7 @@ dependencies {
     implementation 'com.dji:dji-sdk:4.3.2'
     implementation 'com.dji:dji-uilibrary:4.3.2'
     implementation 'com.android.support:multidex:1.0.2'
+    compile 'org.jetbrains:annotations-java5:15.0'
 }
 
 //This is a temporary strategy for getting around the dependency issues of the DJI UI library.

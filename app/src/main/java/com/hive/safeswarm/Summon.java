@@ -4,9 +4,12 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -25,8 +28,13 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.Map;
 
 public class Summon extends FragmentActivity implements OnMapReadyCallback {
 
@@ -71,7 +79,9 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
     private FusedLocationProviderClient mFusedLocationClient;
 
     private FirebaseDatabase fbDataBase;
-    private DatabaseReference myRef;
+    private DatabaseReference myRef,myRefDismiss;
+
+    private TextView mArrivalTime;
 
 
     @Override
@@ -98,13 +108,28 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
 
         fbDataBase = FirebaseDatabase.getInstance();
         myRef = fbDataBase.getReference();
-
+        // Initiate the dismiss variable as false. It will be true only if the user presses the dismiss button
+        myRef.child("users").child("1_dismiss").setValue(false);
 
         setContentView(R.layout.activity_summon);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
+        new CountDownTimer(600000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+                mArrivalTime = (TextView)findViewById(R.id.arrivalTime);
+                mArrivalTime.setText("Arrives in\n"+timeConversion(millisUntilFinished/1000)+" mins");
+            }
+
+            public void onFinish() {
+                mArrivalTime.setText("Arrived!");
+            }
+
+        }.start();
 
     }
 
@@ -185,6 +210,23 @@ public class Summon extends FragmentActivity implements OnMapReadyCallback {
                 //Toast.makeText(getApplicationContext(), "Updated the DB with current GPS location!", Toast.LENGTH_LONG).show();
             }
         };
+    }
+
+    public void dismissMission(View v) {
+        myRef.child("users").child("1_dismiss").setValue(true);
+    }
+
+    private static String timeConversion(long totalSeconds) {
+
+        final int MINUTES_IN_AN_HOUR = 60;
+        final int SECONDS_IN_A_MINUTE = 60;
+
+        long seconds = totalSeconds % SECONDS_IN_A_MINUTE;
+        long totalMinutes = totalSeconds / SECONDS_IN_A_MINUTE;
+        long minutes = totalMinutes % MINUTES_IN_AN_HOUR;
+        long hours = totalMinutes / MINUTES_IN_AN_HOUR;
+
+        return minutes + ":" + seconds;
     }
 
     /**

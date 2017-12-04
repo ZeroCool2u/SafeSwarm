@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">SafeSwarm</string>
     <string name="title_activity_summon">SOS</string>
+    <string name="google_maps_key">AIzaSyBor0p8qiXYNUd5vdHPmaP69_BT2hrKnfo</string>
 </resources>

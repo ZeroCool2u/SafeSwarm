@@ -75,6 +75,7 @@ public class Deployment extends AppCompatActivity {
     private LatLng startLatLng, endLatLng, midLatLng;
     private FirebaseDatabase fbDataBase;
     private DatabaseReference myRef;
+    private Boolean isDismissed = false, missionStarted = false;
     private WaypointMissionOperatorListener eventNotificationListener = new WaypointMissionOperatorListener() {
         @Override
         public void onDownloadUpdate(WaypointMissionDownloadEvent downloadEvent) {
@@ -210,6 +211,24 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onCancelled(DatabaseError databaseError) {
                 Toast.makeText(getApplicationContext(), "WARNING: Target location update failed. Retrying now.", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        DatabaseReference refDismiss = database.getReference("users/1_dismiss/");
+
+        refDismiss.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                isDismissed = (Boolean) dataSnapshot.getValue();
+                if (isDismissed && missionStarted) {
+                    stopWaypointMission();
+                    Toast.makeText(getApplicationContext(), "Mission Dismissed", Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(getApplicationContext(), "WARNING: Database error: Cannot access to dismiss variable", Toast.LENGTH_LONG).show();
             }
         });
 
@@ -425,6 +444,7 @@ public class Deployment extends AppCompatActivity {
             @Override
             public void onResult(DJIError error) {
                 if (error == null) {
+                    missionStarted = true;
                     Log.v(TAG, "ALERT: Waypoint Mission started successfully!");
                 } else {
                     Log.e(TAG, "WARNING: Attempting to restart mission: " + error.getDescription());

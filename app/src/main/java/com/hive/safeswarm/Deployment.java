@@ -160,7 +160,7 @@ public class Deployment extends AppCompatActivity {
     //start location, so that we can provide the minimum required N Waypoints s.t. N > 1.
     private static LatLng midWayPoint(LatLng start, LatLng dest) {
         Log.v(TAG, "Start lat: " + start.latitude + " Start lon: " + start.longitude);
-        Log.v(TAG, "Dest lat: " + dest.latitude + " Dest lon: " + dest.latitude);
+        Log.v(TAG, "Dest lat: " + dest.latitude + " Dest lon: " + dest.longitude);
         LatLngBounds tempBound = new LatLngBounds(dest, start);
         return tempBound.getCenter();
     }
@@ -222,7 +222,7 @@ public class Deployment extends AppCompatActivity {
                 isDismissed = (Boolean) dataSnapshot.getValue();
                 if (isDismissed && missionStarted) {
                     stopWaypointMission();
-                    Toast.makeText(getApplicationContext(), "Mission Dismissed", Toast.LENGTH_LONG).show();
+                    Log.v(TAG, "ALERT: Mission dismissed!");
                 }
             }
 
@@ -513,7 +513,19 @@ public class Deployment extends AppCompatActivity {
         if (mFlightController == null) {
             initFlightController();
         }
+
         droneLocation = mFlightController.getState().getAircraftLocation();
+        Log.v(TAG, "ALERT: Test double: " + Double.toString(droneLocation.getLatitude()));
+        while (Double.toString(droneLocation.getLatitude()).equals("0.0") || Double.toString(droneLocation.getLongitude()).equals("0.0")) {
+            try {
+                Log.v(TAG, "ALERT: Drone Lat: " + droneLocation.getLatitude());
+                Log.v(TAG, "ALERT: Drone Long: " + droneLocation.getLongitude());
+                Thread.sleep(500);
+                droneLocation = mFlightController.getState().getAircraftLocation();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
         startLatLng = new LatLng(droneLocation.getLatitude(), droneLocation.getLongitude());
         midLatLng = midWayPoint(endLatLng, startLatLng);
